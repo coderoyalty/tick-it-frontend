@@ -15,6 +15,10 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/axios';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@/hooks/use-user';
 
 const formSchema = z.object({
   email: z.email(),
@@ -25,6 +29,24 @@ const formSchema = z.object({
 });
 
 export default function LoginForm() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  const loginMutation = useMutation({
+    mutationFn: async (credentials: any) =>
+      api.post('/auth/login', credentials),
+    onSuccess: () => {
+      //TODO: invalidate and fetch the user state
+
+      toast.success('Login successful!');
+      router.push('/'); //TODO: redirect to dashboard
+    },
+
+    onError: (error: any) => {
+      toast.error(`Login failed: ${error.message}`);
+    },
+  });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -33,34 +55,16 @@ export default function LoginForm() {
     },
   });
 
-  const [isLoading, setIsLoading] = React.useState(false);
+  const { data, isFetched, isLoading } = useUser();
+
+  React.useEffect(() => {
+    if (isFetched && !isLoading && data) {
+      router.replace('/');
+    }
+  }, [data, isLoading, isFetched, router]);
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
-    try {
-      setIsLoading(true);
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify(data),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
-      }
-
-      toast.success('Login successful!');
-    } catch (error) {
-      if (error instanceof Error) {
-        toast.error(`Login failed: ${error.message}`);
-      } else {
-        toast.error('Login failed: An unknown error occurred');
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    await loginMutation.mutateAsync(data);
   }
 
   return (
@@ -129,10 +133,12 @@ export default function LoginForm() {
                 <Button
                   type="submit"
                   form="login-form"
-                  disabled={isLoading}
+                  disabled={
+                    loginMutation.isPending || isLoading || data !== null
+                  }
                   className="w-full"
                 >
-                  {isLoading && <Spinner />} Login
+                  {loginMutation.isPending && <Spinner />} Login
                 </Button>
                 <FieldDescription className="text-center">
                   Don&apos;t have an account? <a href="/signup">Sign up</a>

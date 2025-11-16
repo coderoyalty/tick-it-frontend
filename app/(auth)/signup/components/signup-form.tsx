@@ -2,7 +2,6 @@
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { toast } from 'sonner';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 
@@ -15,6 +14,10 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@/hooks/use-user';
+import { useMutation } from '@tanstack/react-query';
+import api from '@/lib/axios';
 
 const formSchema = z.object({
   name: z
@@ -37,34 +40,26 @@ export default function SignUpForm() {
     },
   });
 
-  const [isLoading, setIsLoading] = React.useState(false);
+  const router = useRouter();
+
+  const { data, isFetched, isLoading } = useUser();
+
+  React.useEffect(() => {
+    if (isFetched && !isLoading && data) {
+      router.replace('/');
+    }
+  }, [data, isLoading, isFetched, router]);
+
+  const signupMutation = useMutation({
+    mutationFn: async (data: any) => api.post('/auth/signup', data),
+
+    onSuccess: () => {
+      router.push('/login');
+    },
+  });
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
-    try {
-      setIsLoading(true);
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify(data),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
-      }
-
-      toast.success('Login successful!');
-    } catch (error) {
-      if (error instanceof Error) {
-        toast.error(`Login failed: ${error.message}`);
-      } else {
-        toast.error('Login failed: An unknown error occurred');
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    await signupMutation.mutateAsync(data);
   }
 
   return (
@@ -149,10 +144,12 @@ export default function SignUpForm() {
                 <Button
                   type="submit"
                   form="login-form"
-                  disabled={isLoading}
+                  disabled={
+                    signupMutation.isPending || isLoading || data !== null
+                  }
                   className="w-full"
                 >
-                  {isLoading && <Spinner />} Submit
+                  {signupMutation.isPending && <Spinner />} Submit
                 </Button>
                 <FieldDescription className="text-center">
                   Already have an account? <a href="/login">Sign in</a>
