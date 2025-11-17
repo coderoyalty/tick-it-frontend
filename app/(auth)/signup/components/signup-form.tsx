@@ -42,14 +42,6 @@ export default function SignUpForm() {
 
   const router = useRouter();
 
-  const { data, isFetched, isLoading } = useUser();
-
-  React.useEffect(() => {
-    if (isFetched && !isLoading && data) {
-      router.replace('/');
-    }
-  }, [data, isLoading, isFetched, router]);
-
   const signupMutation = useMutation({
     mutationFn: async (data: any) => api.post('/auth/signup', data),
 
@@ -144,9 +136,7 @@ export default function SignUpForm() {
                 <Button
                   type="submit"
                   form="login-form"
-                  disabled={
-                    signupMutation.isPending || isLoading || data !== null
-                  }
+                  disabled={signupMutation.isPending}
                   className="w-full"
                 >
                   {signupMutation.isPending && <Spinner />} Submit

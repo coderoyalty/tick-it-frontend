@@ -36,7 +36,7 @@ export default function LoginForm() {
     mutationFn: async (credentials: any) =>
       api.post('/auth/login', credentials),
     onSuccess: () => {
-      //TODO: invalidate and fetch the user state
+      //TODO: invalidate and fetmmch the user state
 
       toast.success('Login successful!');
       router.push('/'); //TODO: redirect to dashboard
@@ -55,13 +55,13 @@ export default function LoginForm() {
     },
   });
 
-  const { data, isFetched, isLoading } = useUser();
+  // const { data, isFetched, isLoading } = useUser();
 
-  React.useEffect(() => {
-    if (isFetched && !isLoading && data) {
-      router.replace('/');
-    }
-  }, [data, isLoading, isFetched, router]);
+  // React.useEffect(() => {
+  //   if (isFetched && !isLoading && data) {
+  //     router.replace('/');
+  //   }
+  // }, [data, isLoading, isFetched, router]);
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
     await loginMutation.mutateAsync(data);
@@ -133,9 +133,7 @@ export default function LoginForm() {
                 <Button
                   type="submit"
                   form="login-form"
-                  disabled={
-                    loginMutation.isPending || isLoading || data !== null
-                  }
+                  disabled={loginMutation.isPending}
                   className="w-full"
                 >
                   {loginMutation.isPending && <Spinner />} Login

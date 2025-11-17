@@ -7,9 +7,37 @@ import {
   HydrationBoundary,
   QueryClient,
 } from '@tanstack/react-query';
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
+import api from '@/lib/axios';
+
+export async function getUser() {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  try {
+    const res = await api.get('/auth/me', {
+      headers: {
+        Cookie: cookieHeader,
+      },
+    });
+
+    return res.data;
+  } catch (err) {
+    return null;
+  }
+}
 
 export default async function LoginPage() {
   const queryClient = new QueryClient();
+
+  const data = await getUser();
+
+  queryClient.setQueryData(['user'], data);
+
+  if (data) {
+    return redirect('/');
+  }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
